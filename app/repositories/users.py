@@ -11,19 +11,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class UsersRepository:
-    def __init__(self, db_instance: AsyncSession):
-        self.db = db_instance
+    def __init__(self, db_instance: AsyncSession) -> None:
+        self.db: AsyncSession = db_instance
 
-    async def add(self, user: User):
+    async def add(self, user: User) -> None:
         self.db.add(user)
         await self.db.commit()
 
 
-    async def edit(self, user: User, user_id: int):
+    async def edit(self, user: User, user_id: int) -> None:
         statement = select(User).where(User.id == user_id)
 
         result = await self.db.execute(statement)
         item: User = result.scalars().first()
+
+        if not item:
+            return
 
         item.email = user.email
         item.username = user.username
@@ -33,16 +36,16 @@ class UsersRepository:
         await self.db.refresh(item)
 
     
-    async def delete(self, user_id: int):
+    async def delete(self, user_id: int) -> None:
         statement = select(User).where(User.id == user_id)
 
         result = await self.db.execute(statement)
         item: User = result.scalars().first()
 
-        self.db.delete(item)
-        
+        await self.db.delete(item)
 
-    async def buy_ticket(self, ticket_id: int, user_id: int):
+
+    async def buy_ticket(self, ticket_id: int, user_id: int) -> None:
         statement = select(Ticket).where(Ticket.id == ticket_id)
 
         result = await self.db.execute(statement)
@@ -55,7 +58,7 @@ class UsersRepository:
             delete(UserTicket).where(UserTicket.user_id == user_id)
         )
 
-        now = datetime.now(timezone.utc)
+        now: datetime = datetime.now(timezone.utc)
 
         if chosen_ticket.type == TicketType.BASIC:
             expires = now + timedelta(seconds=30)
@@ -77,7 +80,7 @@ class UsersRepository:
         await self.db.commit()
 
 
-    async def buy_card(self, user_id: int):
+    async def buy_card(self, user_id: int) -> None:
         stmt = select(Card).where(Card.user_id == user_id)
         result = await self.db.execute(stmt)
         existing_card = result.scalar_one_or_none()
@@ -95,7 +98,7 @@ class UsersRepository:
         await self.db.commit()
 
 
-    def get_expiration_late_night(self, days_from_now=31, tz_str="Europe/Sofia"):
+    def get_expiration_late_night(self, days_from_now=31, tz_str="Europe/Sofia") -> datetime:
         now = datetime.now(ZoneInfo(tz_str))
         target_date = now.date() + timedelta(days=days_from_now)
 
